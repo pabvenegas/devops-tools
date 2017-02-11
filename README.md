@@ -19,7 +19,7 @@ docker_tools docker -h
 devops_tools generate create
 
 # docker build upd logs
-docker_tool docker run -b -u -l
+docker_tools docker run -b -u -l
 
 # start container use entrypoint bash
 docker_tools docker runbash
@@ -56,10 +56,16 @@ deactivate
 sudo -H pip install [repo_path]/devops_tools/
 sudo -H pip uninstall -y devops_tools
 
-## pip install (from pipy.org)
+## Upload to pypi
+pip install twine
 
-pip install devops_tools
-pip uninstall -y devops_tools
+python setup.py sdist bdist_wheel
+twine upload dist/*
+
+## pip install (from pypi.org)
+
+pip install -vvv devops-tools
+pip uninstall -y devops-tools
 
 ```
 

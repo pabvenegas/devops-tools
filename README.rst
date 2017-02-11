@@ -14,7 +14,7 @@ Installation
 
 The easiest way to install most Python packages is via ``easy_install`` or ``pip``::
 
-    $ easy_install devops_tools
+    $ pip install devops-tools
 
 Usage
 -----
@@ -25,7 +25,7 @@ docker_tools -h
 docker_tools docker -h
 
 # docker build upd logs
-docker_tool docker run -b -u -l
+docker_tools docker run -b -u -l
 
 # start container use entrypoint bash
 docker_tools docker runbash
