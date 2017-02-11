@@ -19,11 +19,24 @@ The easiest way to install most Python packages is via ``easy_install`` or ``pip
 Usage
 -----
 
-TODO: This is a good place to start with a couple of concrete examples of how the package should be used.
+```
+# show commands
+docker_tools -h
+docker_tools docker -h
+
+# docker build upd logs
+docker_tool docker run -b -u -l
+
+# start container use entrypoint bash
+docker_tools docker runbash
+
+# exec to existing container
+docker_tools docker execbash
+```
 
 The boilerplate code provides a dummy ``main`` function that prints out the word 'Hello'::
 
     >> from devopstools import main
     >> main()
-    
+
 When the package is installed via ``easy_install`` or ``pip`` this function will be bound to the ``devops_tools`` executable in the Python installation's ``bin`` directory (on Windows - the ``Scripts`` directory).

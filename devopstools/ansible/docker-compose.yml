@@ -1,0 +1,7 @@
+version: "2"
+
+services:
+  main:
+    image: ansible
+    volumes:
+      - `pwd`:/ansible-files"

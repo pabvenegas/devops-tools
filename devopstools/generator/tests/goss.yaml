@@ -1,0 +1,9 @@
+file:
+  /etc/centos-release:
+    exists: true
+    filetype: file
+
+command:
+  # ensure space exists before and after = character, otherwise test fails.
+  test "$TZ" = "Australia/Sydney":
+    exit-status: 0

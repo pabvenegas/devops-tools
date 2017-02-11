@@ -1,1 +1,4 @@
 include README.rst CHANGELOG.txt LICENSE.txt
+include devopstools/logging.conf
+recursive-include devopstools/generator/ *
+recursive-include devopstools/git-helper/ *

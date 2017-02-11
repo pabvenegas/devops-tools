@@ -1,0 +1,11 @@
+version: "2"
+
+services:
+  main:
+    build:
+      context: ../
+      # args:
+    image: devops/tools/create:${image_tag}
+    # ports:
+    env_file:
+      - env.build.dev.main
