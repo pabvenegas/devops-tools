@@ -1,7 +1,9 @@
 import os
+from getpass import getpass, _raw_input
+import sys
 
 import devopstools.general
-from getpass import getpass, _raw_input
+
 
 def create_parser(parent_parser, subparsers):
     """
@@ -27,20 +29,29 @@ def create_parser(parent_parser, subparsers):
 
 def main(args):
     file_path = os.path.dirname(os.path.abspath(__file__))
-    dir_path = os.getcwd()
+    cwd = os.getcwd()
 
     if args.action_command == "create":
-        # msg =
-        print("This will overwrite files at: %s" % dir_path)
-        create_continue = _raw_input("Do you wish to continue? (y/n)")
+
+        folder = raw_input("Please enter destination folder path ? [.] ")
+        if folder.startswith('/'):
+            print "Destination folder must be relative, cannot start with '/'"
+            sys.exit(1)
+
+        if not folder:
+            folder = "."
+
+        dest_path = os.path.join(cwd, folder.strip())
+        print("This will copy files to: %s" % dest_path)
+        create_continue = _raw_input("Do you wish to continue? (y/n) ")
 
         if create_continue == "y":
-            commands = ["mkdir", "tmp"]
-            print commands
+            from_path = os.path.join(file_path, "generator/")
+            if not os.path.exists(from_path):
+                print "Unable to find generate template path (%s)" % from_path
+                sys.exit(1)
+
+            commands = ["cp", "-r", from_path, dest_path]
+            # print commands
             devopstools.general.exec_command(commands)
 
-            from_path = file_path + "/" + "generator/"
-            to_path = "./tmp"
-            commands = ["cp", "-r", from_path, to_path]
-            print commands
-            devopstools.general.exec_command(commands)
