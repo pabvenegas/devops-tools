@@ -1,15 +1,18 @@
-import devopstools.general
-import os
 import argparse
-import sys
 import logging
 import logging.config
+import os
+import sys
+from getpass import _raw_input
 
 import docker
 from docker.client import Client
 from docker.utils import kwargs_from_env
+
+import devopstools.general
 import dockerpty
 import yaml
+
 
 def create_parser(parent_parser, subparsers):
 
@@ -29,12 +32,13 @@ def create_parser(parent_parser, subparsers):
     action_subparser.add_parser("logs", help="Docker-compose logs", parents=[parent_parser])
     action_subparser.add_parser("ps", help="Docker-compose ps", parents=[parent_parser])
     action_subparser.add_parser("psq", help="Docker-compose ps -q", parents=[parent_parser])
-
-    runbash_parser = action_subparser.add_parser("runbash", help="Docker-compose run bash", parents=[parent_parser])
-    runbash_parser.add_argument('-e', dest='entrypoint', action='store', help="Entrypoint", default="bash")
-
     action_subparser.add_parser("stop", help="Docker-compose stop", parents=[parent_parser])
     action_subparser.add_parser("upd", help="Docker-compose up -d", parents=[parent_parser])
+
+    generate_parser = action_subparser.add_parser("generate", help="Generate new docker container",
+                                                  parents=[parent_parser])
+    generate_parser.add_argument('-i', "--imagename", dest='image_name', action='store',
+                                 help="Image Name for docker container")
 
     run_parser = action_subparser.add_parser("run", help="Docker-compose combine commands ",
                                              parents=[parent_parser])
@@ -42,12 +46,17 @@ def create_parser(parent_parser, subparsers):
     run_parser.add_argument('-u', '--upd', dest='upd', action='store_true', help="upd")
     run_parser.add_argument('-l', dest='logs', action='store_true', help="logs")
 
+    runbash_parser = action_subparser.add_parser("runbash", help="Docker-compose run bash", parents=[parent_parser])
+    runbash_parser.add_argument('-e', dest='entrypoint', action='store', help="Entrypoint", default="bash")
+
 def main(args):
     DockerCli().main(args)
 
 class DockerCli(object):
     """Docker CLI"""
 
+    _main_args = None
+    _cwd = None
     _scripts_path = None
     _logger = None
     _image_tag = None
@@ -56,23 +65,21 @@ class DockerCli(object):
 
     def __init__(self):
         self._scripts_path = os.path.dirname(os.path.abspath(__file__))
-
-        self._docker_compose_path = os.environ.get("DEVOPSTOOLS_DOCKER_COMPOSE_PATH",
-                                                   "./docker-compose/docker-compose.yml")
-
         logging.config.fileConfig(os.path.join(self._scripts_path, 'logging.conf'))
         self._logger = logging.getLogger('root')
 
+        self._cwd = os.getcwd()
+
+        self._docker_compose_path = os.environ.get("DEVOPSTOOLS_DOCKER_COMPOSE_PATH",
+                                                   "./docker-compose/docker-compose.yml")
+        self._generate_default_image_name = "registry/group/repo"
+        self._generate_default_dest_folder = "."
+
     def main(self, args):
+        """ Main functions """
+        self._main_args = args
         self._logger.debug('Func: %s; args: %s', main.__name__, args)
 
-        if not os.path.exists(self._docker_compose_path):
-            print("Unable to read docker-compose at path (%s). "
-                  "Override with env variable DEVOPSTOOLS_DOCKER_COMPOSE_PATH" %
-                  self._docker_compose_path)
-            sys.exit(1)
-
-        self.set_image_name(args)
         self._project_name = args.project_name or self.get_project_name()
         self._service_name = args.service_name or "main"
 
@@ -84,7 +91,6 @@ class DockerCli(object):
                 self.upd(args)
             if args.logs:
                 self.logs(args)
-
         else:
             method_to_call = getattr(self, args.action_command)
             method_to_call(args)
@@ -120,11 +126,20 @@ class DockerCli(object):
         return image.rsplit(':', 1)[0]
 
     def docker_compose_base(self):
+        if not os.path.exists(self._docker_compose_path):
+            print("Unable to read docker-compose at path (%s). "
+                  "Override with env variable DEVOPSTOOLS_DOCKER_COMPOSE_PATH" %
+                  self._docker_compose_path)
+            sys.exit(1)
+
+        self.set_image_name(self._main_args)
+
         commands = ["docker-compose",
                     "-p",
                     self._project_name,
                     "-f",
                     self._docker_compose_path]
+        self._logger.debug("docker_compose_base: commands = %s", commands)
         return commands
 
     def exec_docker_compose(self, commands, realtime_output=False):
@@ -154,6 +169,44 @@ class DockerCli(object):
     def down(self, args):
         commands = ["down"]
         print self.exec_docker_compose(commands)
+
+    def generate(self, args):
+        """ Generate a docker container """
+
+        dest_folder = raw_input("Please enter destination folder path ? [%s] " \
+                                % self._generate_default_dest_folder)
+        if dest_folder.startswith('/'):
+            print "Destination folder must be relative, cannot start with '/'"
+            sys.exit(1)
+
+        if not dest_folder:
+            dest_folder = self._generate_default_dest_folder
+
+        dest_path = os.path.join(self._cwd, dest_folder.strip())
+        print("This will copy files to: %s" % dest_path)
+        create_continue = _raw_input("Do you wish to continue? (y/n) ")
+
+        if create_continue == "y":
+            from_path = os.path.join(self._scripts_path, "generator/")
+            if not os.path.exists(from_path):
+                print "Unable to find generate template path (%s)" % from_path
+                sys.exit(1)
+
+            commands = ["cp", "-r", from_path, dest_path]
+            devopstools.general.exec_command(commands)
+
+            image_name = args.image_name
+            if not args.image_name:
+                image_name = raw_input("Please enter image_name ? [%s] " % self._generate_default_image_name)
+                if not image_name:
+                    image_name = self._generate_default_image_name
+
+            generated_docker_compose = os.path.join(dest_path, "docker-compose", "docker-compose.yml")
+
+            loaded_yaml = devopstools.general.load_yaml_file(generated_docker_compose)
+            loaded_yaml["services"]["main"]["image"] = "%s:${image_tag}" % image_name
+
+            devopstools.general.write_yaml_file(loaded_yaml, generated_docker_compose)
 
     def logs(self, args):
         commands = ["logs", self._service_name]
@@ -189,6 +242,7 @@ class DockerCli(object):
         print self.exec_docker_compose(commands)
 
     def get_project_name(self):
+        """ Get project name from current working folder """
         (head, tail) = os.path.split(os.getcwd())
         return tail
 

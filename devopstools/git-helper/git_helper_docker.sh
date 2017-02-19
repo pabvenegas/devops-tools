@@ -18,10 +18,10 @@ function git_docker_branch_name()
   echo "${branch_name}"
 }
 
-# Sanitise branch name to be valid docker image tag 
+# Sanitise branch name to be valid docker image tag
 function get_sanitise_branch_name_for_docker_tag()
 {
-  branch_name_value=$(git_docker_branch_name) 
+  branch_name_value=$(git_docker_branch_name)
   # replace / with -
   sanitised_branch_name=`echo ${branch_name_value} | cut -d'-' -f 1,2 | sed -e 's/\//-/g'`
   echo "${sanitised_branch_name}"
@@ -56,7 +56,9 @@ function get_git_docker_tag()
 # by referencing 'load_env.sh'
 function get_docker_image_tag_prefix()
 {
-  source docker-compose/load_env.sh "${service_name}"
+  if [ -e "docker-compose/load_env.sh" ]; then
+    source docker-compose/load_env.sh "${service_name}"
+  fi
 
   local image_tag_prefix_value
   if [ ! -z "${IMAGE_TAG_PREFIX}" ]; then

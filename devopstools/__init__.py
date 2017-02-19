@@ -9,7 +9,6 @@ import sys
 
 import devopstools.docker_cli
 import devopstools.ansible_docker
-import devopstools.generator
 
 def create_parser():
     """
@@ -24,7 +23,6 @@ def create_parser():
 
     devopstools.docker_cli.create_parser(parent_parser, service_subparsers)
     devopstools.ansible_docker.create_parser(parent_parser, service_subparsers)
-    devopstools.generator.create_parser(parent_parser, service_subparsers)
 
     return main_parser
 
