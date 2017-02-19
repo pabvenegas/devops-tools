@@ -1,15 +1,14 @@
 import argparse
 import logging
-import logging.config
 import os
 import sys
 from getpass import _raw_input
 
+import devopstools.general
 import docker
 from docker.client import Client
 from docker.utils import kwargs_from_env
 
-import devopstools.general
 import dockerpty
 import yaml
 
@@ -49,12 +48,13 @@ def create_parser(parent_parser, subparsers):
     runbash_parser = action_subparser.add_parser("runbash", help="Docker-compose run bash", parents=[parent_parser])
     runbash_parser.add_argument('-e', dest='entrypoint', action='store', help="Entrypoint", default="bash")
 
-def main(args):
-    DockerCli().main(args)
+def main(args, logger, config):
+    DockerCli(logger, config).main(args)
 
 class DockerCli(object):
     """Docker CLI"""
 
+    _config = None
     _main_args = None
     _cwd = None
     _scripts_path = None
@@ -63,17 +63,18 @@ class DockerCli(object):
     _project_name = None
     _service_name = None
 
-    def __init__(self):
-        self._scripts_path = os.path.dirname(os.path.abspath(__file__))
-        logging.config.fileConfig(os.path.join(self._scripts_path, 'logging.conf'))
-        self._logger = logging.getLogger('root')
+    def __init__(self, logger, config):
+        self._logger = logger
+        self._config = config
 
+        self._scripts_path = os.path.dirname(os.path.abspath(__file__))
         self._cwd = os.getcwd()
 
         self._docker_compose_path = os.environ.get("DEVOPSTOOLS_DOCKER_COMPOSE_PATH",
-                                                   "./docker-compose/docker-compose.yml")
-        self._generate_default_image_name = "registry/group/repo"
-        self._generate_default_dest_folder = "."
+                                                   self._config["docker"]["docker_compose_path"])
+
+        self._generate_default_image_name = self._config["docker"]["generate"]["default_image_name"]
+        self._generate_default_dest_folder = self._config["docker"]["generate"]["default_dest_folder"]
 
     def main(self, args):
         """ Main functions """
@@ -81,7 +82,7 @@ class DockerCli(object):
         self._logger.debug('Func: %s; args: %s', main.__name__, args)
 
         self._project_name = args.project_name or self.get_project_name()
-        self._service_name = args.service_name or "main"
+        self._service_name = args.service_name or self._config["docker"]["service_name"]
 
         if args.action_command == "run":
             # NOTE: specific order required for piggyback
@@ -100,7 +101,7 @@ class DockerCli(object):
         commands = [self._scripts_path + "/git-helper/git_helper_docker.sh",
                     self._scripts_path,
                     "get_git_docker_tag",
-                    "main",
+                    self._service_name,
                     ""]
         image_tag = devopstools.general.exec_command(commands)
 
@@ -204,7 +205,7 @@ class DockerCli(object):
             generated_docker_compose = os.path.join(dest_path, "docker-compose", "docker-compose.yml")
 
             loaded_yaml = devopstools.general.load_yaml_file(generated_docker_compose)
-            loaded_yaml["services"]["main"]["image"] = "%s:${image_tag}" % image_name
+            loaded_yaml["services"][self._service_name]["image"] = "%s:${image_tag}" % image_name
 
             devopstools.general.write_yaml_file(loaded_yaml, generated_docker_compose)
 

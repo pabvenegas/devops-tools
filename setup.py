@@ -24,7 +24,7 @@ class PyTest(TestCommand):
         sys.exit(pytest.main(self.test_args))
 
 
-version = "0.2"
+version = "0.3"
 
 setup(name="devops-tools",
       version=version,

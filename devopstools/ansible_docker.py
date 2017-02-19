@@ -24,10 +24,10 @@ def create_parser(parent_parser, subparsers):
 
     return ansible_parser
 
-def main(args):
+def main(args,logger, config):
     AnsibleDocker().main(args)
 
-class AnsibleDocker:
+class AnsibleDocker(object):
 
     def main(self, args):
         print "ansible_hello"
