@@ -12,11 +12,12 @@ This README would normally document whatever steps are necessary to get your app
 
 ```
 # show commands
-docker_tools -h
-docker_tools docker -h
+devops_tools -h
+devops_tools docker -h
 
 # generate docker code from template
-devops_tools generate create
+devops_tools docker generate
+devops_tools docker generate --imagename dtr.com/pabvenegas/gentest
 
 # docker build upd logs
 docker_tools docker run -b -u -l
