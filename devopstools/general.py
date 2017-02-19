@@ -29,7 +29,10 @@ def exec_command(commands, realtime_output=False):
             (return_code, output) = execute(commands)
             return output
         else:
-            exec_output = subprocess.check_output(commands, env=os.environ)
+            try:
+                exec_output = subprocess.check_output(commands, env=os.environ)
+            except subprocess.CalledProcessError as ex:
+                exec_output = ""
             return exec_output
     except KeyboardInterrupt:
         pass
